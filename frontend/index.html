@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Minimal To-Do</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;max-width:680px;margin:40px auto;padding:0 16px}
+    h1{margin-bottom:.25rem}.hint{color:#666}
+    form{display:flex;gap:8px;margin:16px 0}
+    input[type=text]{flex:1;padding:10px;border:1px solid #ccc;border-radius:8px}
+    button{padding:10px 14px;border-radius:8px;border:1px solid #ddd;cursor:pointer}
+    ul{list-style:none;padding:0}li{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0}
+    .title{flex:1}.done{text-decoration:line-through;color:#777}.empty{color:#888;margin-top:16px}
+  </style>
+</head>
+<body>
+  <h1>📝 Minimal To-Do</h1>
+  <p class="hint">Add tasks, toggle done, delete. Backend: FastAPI · DB: SQLite</p>
+
+  <form id="new-task-form">
+    <input id="title" type="text" placeholder="What needs to be done?" required />
+    <button type="submit">Add</button>
+  </form>
+
+  <ul id="list"></ul>
+  <p class="empty" id="empty" style="display:none;">No tasks yet. Add one above ↑</p>
+
+  <script>
+    const API = '/api/tasks';
+    async function fetchTasks(){ const r=await fetch(API); render(await r.json()); }
+    async function addTask(title){
+      await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title})});
+      await fetchTasks();
+    }
+    async function toggleTask(id,completed){
+      await fetch(`${API}/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({completed})});
+      await fetchTasks();
+    }
+    async function delTask(id){ await fetch(`${API}/${id}`,{method:'DELETE'}); await fetchTasks(); }
+    function render(tasks){
+      const list=document.getElementById('list'), empty=document.getElementById('empty');
+      list.innerHTML=''; if(!tasks.length){ empty.style.display='block'; return;} empty.style.display='none';
+      for(const t of tasks){
+        const li=document.createElement('li');
+        const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=t.completed;
+        cb.addEventListener('change',()=>toggleTask(t.id,cb.checked));
+        const span=document.createElement('span'); span.className='title'+(t.completed?' done':''); span.textContent=t.title;
+        const del=document.createElement('button'); del.textContent='Delete'; del.onclick=()=>delTask(t.id);
+        li.append(cb,span,del); list.append(li);
+      }
+    }
+    document.getElementById('new-task-form').addEventListener('submit',async e=>{
+      e.preventDefault(); const input=document.getElementById('title');
+      const title=input.value.trim(); if(!title) return; await addTask(title); input.value=''; input.focus();
+    });
+    fetchTasks();
+  </script>
+</body>
+</html>
